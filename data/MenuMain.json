@@ -1,0 +1,38 @@
+{
+    "menuleft": {
+        "menuitem": [{
+                "title": "Javascript Reloaded",
+                "route": "",
+                "menuItem": "public",
+                "submenu": [{
+                        "title": "Require, Bootsrap, Backbone",
+                        "route": "require"
+                    }
+                ]
+            }, {
+                "title": "Other",
+                "route": "",
+                "menuItem": "other",
+                "submenu": [{
+                        "title": "HTML5",
+                        "route": "HTML5"
+                    }, {
+                        "title": "i18n",
+                        "route": "i18n"
+                    }
+
+                ]
+            }
+
+        ]
+    },
+    "menuright": {
+        "menuitem": [{
+                "title": "About",
+                "route": "about",
+                "menuItem": "about"
+            }
+        ]
+    }
+}
+

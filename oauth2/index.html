@@ -1,159 +1,179 @@
 <!--
 *
 * steffenkrueger.de
-* license:MIT
 *
+* Copyright 2020 steffenkrueger
+*
+* Permission is hereby granted, free of charge, to any person obtaining a 
+* copy of this software and associated documentation files (the "Software"), 
+* to deal in the Software without restriction, including without limitation 
+* the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+* and/or sell copies of the Software, and to permit persons to whom the 
+* Software is furnished to do so, subject to the following conditions:
+* 
+* The above copyright notice and this permission notice shall be included 
+* in all copies or substantial portions of the Software.
+* 
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS 
+* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
+* THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+* SOFTWARE.
+* 
+* 
 -->
 <!DOCTYPE html>
 <html lang="en">
-<style>
-    .margin-bottom {
-        margin-bottom: 6px;
-    }
-
-    .input-res {
-        padding: 6px;
-        margin-bottom: 12px;
-    }
-</style>
-<script>
-    function downloadString(text, filename) {
-        var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(text);
-        var downloadEl = document.createElement("a");
-        downloadEl.setAttribute("href", dataStr);
-        downloadEl.setAttribute("download", filename);
-        document.body.appendChild(downloadEl); // required for firefox
-        downloadEl.click();
-        downloadEl.remove();
-    }
-
-    function restHqGetToken(options) {
-        options = options || {};
-
-        var url = new URL(options.url);
-
-        var formData = Object.keys(options.data)
-            .reduce(function (a, key) {
-                return a + `${key}=${options.data[key]}&`;
-            }, "")
-            .substr();
-
-        return new Promise(function (resolve, reject) {
-            var xhr = new XMLHttpRequest();
-            xhr.open("POST", url, true);
-            xhr.setRequestHeader(
-                "Content-Type",
-                "application/x-www-form-urlencoded"
-            );
-            xhr.onreadystatechange = function () {
-                if (xhr.readyState !== 4) return;
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    resolve({ oauthTokenResponse: JSON.parse(xhr.response) });
-                } else {
-                    reject({
-                        status: xhr.status,
-                        statusText: xhr.statusText
-                    });
-                }
-            };
-            xhr.send(formData.substr(0, formData.length - 1));
-        });
-    }
-
-    // main entry
-    var appUrl = new URL(window.location.href);
-    var codeFromFirstRequest = appUrl.searchParams.get("code");
-
-    if (codeFromFirstRequest) {
-        // code is arrived
-        // step 2 get token
-        const data = JSON.parse(window.name);
-        // console.log(data.restEndpoint);
-        // console.log(data.requestTokenUrl);
-
-        var oauthOptions = {
-            url: data.requestTokenUrl,
-            data: {
-                client_id: data.clientId,
-                client_secret: data.clientSecret,
-                code: codeFromFirstRequest,
-                grant_type: "authorization_code"
-            }
-        };
-
-        restHqGetToken(oauthOptions).then(function (response) {
-            // use token
-
-            if (data.restEndpoint) {
-                var xhr = new XMLHttpRequest();
-                xhr.open("Get", data.restEndpoint, true);
-                xhr.setRequestHeader("Content-Type", "application/json");
-                xhr.setRequestHeader("Accept", "application/json");
-                xhr.setRequestHeader(
-                    "Authorization",
-                    `Bearer ${response.oauthTokenResponse.access_token}`
-                );
-                xhr.onreadystatechange = function () {
-                    if (xhr.readyState !== 4) {
-                        return;
-                    }
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        downloadString(xhr.response, "isheet_fields.json");
-                        window.name = "";
-                        window.location.href = "/";
-                    } else {
-                        // simple popup
-                        alert("No access.");
-                        // remove code from client url
-                        window.name = "";
-                        window.location.href = "/";
-                    }
-                };
-                xhr.send();
-            } else {
-                console.log("No REST endpoint.")
-            }
-        });
-    } else {
-        document.addEventListener("DOMContentLoaded", function () {
-            var appUrl = new URL(window.location.href);
-            var clientId = appUrl.searchParams.get("clientid");
-            var clientSecret = appUrl.searchParams.get("clientsecret");
-            var oauthCodeUrl = appUrl.searchParams.get("codeurl");
-            var requestTokenUrl = appUrl.searchParams.get("requesttokenurl");
-            var restEndpoint = appUrl.searchParams.get("resturl");
-
-            document.getElementById("client-id").value = clientId;
-            document.getElementById("client-secret").value = clientSecret;
-            document.getElementById("get-rest-endpoint").value = restEndpoint;
-            document.getElementById("oauth-url").value = oauthCodeUrl;
-            document.getElementById("request-token-url").value = requestTokenUrl;
-        });
-    }
-
-    // listener
-    function exchangeData() {
-        // start step 1 - get code
-        var clientId = document.getElementById("client-id").value;
-        var clientSecret = document.getElementById("client-secret").value;
-        var restEndpoint = document.getElementById("get-rest-endpoint").value;
-        var oauthCodeUrl = document.getElementById("oauth-url").value;
-        var requestTokenUrl = document.getElementById("request-token-url").value;
-
-        // store input
-        window.name = JSON.stringify({
-            clientId,
-            clientSecret,
-            requestTokenUrl,
-            restEndpoint,
-        });
-        var requestCodeUrl = `${oauthCodeUrl}&client_id=${clientId}&redirect_uri=${appUrl}`;
-        // redirect
-        window.location.href = requestCodeUrl;
-    }
-</script>
 
 <head>
+    <style>
+        .margin-bottom {
+            margin-bottom: 6px;
+        }
+
+        .input-res {
+            padding: 6px;
+            margin-bottom: 12px;
+        }
+    </style>
+    <script>
+        function downloadString(text, filename) {
+            var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(text);
+            var downloadEl = document.createElement("a");
+            downloadEl.setAttribute("href", dataStr);
+            downloadEl.setAttribute("download", filename);
+            document.body.appendChild(downloadEl); // required for firefox
+            downloadEl.click();
+            downloadEl.remove();
+        }
+
+        function restHqGetToken(options) {
+            options = options || {};
+
+            var url = new URL(options.url);
+
+            var formData = Object.keys(options.data)
+                .reduce(function (a, key) {
+                    return a + `${key}=${options.data[key]}&`;
+                }, "")
+                .substr();
+
+            return new Promise(function (resolve, reject) {
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", url, true);
+                xhr.setRequestHeader(
+                    "Content-Type",
+                    "application/x-www-form-urlencoded"
+                );
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState !== 4) return;
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve({ oauthTokenResponse: JSON.parse(xhr.response) });
+                    } else {
+                        reject({
+                            status: xhr.status,
+                            statusText: xhr.statusText
+                        });
+                    }
+                };
+                xhr.send(formData.substr(0, formData.length - 1));
+            });
+        }
+
+        // main entry
+        var appUrl = new URL(window.location.href);
+        var codeFromFirstRequest = appUrl.searchParams.get("code");
+
+        if (codeFromFirstRequest) {
+            // code is arrived
+            // step 2 get token
+            const data = JSON.parse(window.name);
+            // console.log(data.restEndpoint);
+            // console.log(data.requestTokenUrl);
+
+            var oauthOptions = {
+                url: data.requestTokenUrl,
+                data: {
+                    client_id: data.clientId,
+                    client_secret: data.clientSecret,
+                    code: codeFromFirstRequest,
+                    grant_type: "authorization_code"
+                }
+            };
+
+            restHqGetToken(oauthOptions).then(function (response) {
+                // use token
+
+                if (data.restEndpoint) {
+                    var xhr = new XMLHttpRequest();
+                    xhr.open("Get", data.restEndpoint, true);
+                    xhr.setRequestHeader("Content-Type", "application/json");
+                    xhr.setRequestHeader("Accept", "application/json");
+                    xhr.setRequestHeader(
+                        "Authorization",
+                        `Bearer ${response.oauthTokenResponse.access_token}`
+                    );
+                    xhr.onreadystatechange = function () {
+                        if (xhr.readyState !== 4) {
+                            return;
+                        }
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            downloadString(xhr.response, "isheet_fields.json");
+                            window.name = "";
+                            window.location.href = "/";
+                        } else {
+                            // simple popup
+                            alert("No access.");
+                            // remove code from client url
+                            window.name = "";
+                            window.location.href = "/";
+                        }
+                    };
+                    xhr.send();
+                } else {
+                    console.log("No REST endpoint.")
+                }
+            });
+        } else {
+            document.addEventListener("DOMContentLoaded", function () {
+                var appUrl = new URL(window.location.href);
+                var clientId = appUrl.searchParams.get("clientid");
+                var clientSecret = appUrl.searchParams.get("clientsecret");
+                var oauthCodeUrl = appUrl.searchParams.get("codeurl");
+                var requestTokenUrl = appUrl.searchParams.get("requesttokenurl");
+                var restEndpoint = appUrl.searchParams.get("resturl");
+
+                document.getElementById("client-id").value = clientId;
+                document.getElementById("client-secret").value = clientSecret;
+                document.getElementById("get-rest-endpoint").value = restEndpoint;
+                document.getElementById("oauth-url").value = oauthCodeUrl;
+                document.getElementById("request-token-url").value = requestTokenUrl;
+            });
+        }
+
+        // listener
+        function exchangeData() {
+            // start step 1 - get code
+            var clientId = document.getElementById("client-id").value;
+            var clientSecret = document.getElementById("client-secret").value;
+            var restEndpoint = document.getElementById("get-rest-endpoint").value;
+            var oauthCodeUrl = document.getElementById("oauth-url").value;
+            var requestTokenUrl = document.getElementById("request-token-url").value;
+
+            // store input
+            window.name = JSON.stringify({
+                clientId,
+                clientSecret,
+                requestTokenUrl,
+                restEndpoint,
+            });
+            var requestCodeUrl = `${oauthCodeUrl}&client_id=${clientId}&redirect_uri=${appUrl}`;
+            // redirect
+            window.location.href = requestCodeUrl;
+        }
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>

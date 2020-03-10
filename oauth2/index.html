@@ -1,0 +1,213 @@
+<!--
+*
+* steffenkrueger.de
+* license:MIT
+*
+-->
+<!DOCTYPE html>
+<html lang="en">
+<style>
+    .margin-bottom {
+        margin-bottom: 6px;
+    }
+
+    .input-res {
+        padding: 6px;
+        margin-bottom: 12px;
+    }
+</style>
+<script>
+    function downloadString(text, filename) {
+        var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(text);
+        var downloadEl = document.createElement("a");
+        downloadEl.setAttribute("href", dataStr);
+        downloadEl.setAttribute("download", filename);
+        document.body.appendChild(downloadEl); // required for firefox
+        downloadEl.click();
+        downloadEl.remove();
+    }
+
+    function restHqGetToken(options) {
+        options = options || {};
+
+        var url = new URL(options.url);
+
+        var formData = Object.keys(options.data)
+            .reduce(function (a, key) {
+                return a + `${key}=${options.data[key]}&`;
+            }, "")
+            .substr();
+
+        return new Promise(function (resolve, reject) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", url, true);
+            xhr.setRequestHeader(
+                "Content-Type",
+                "application/x-www-form-urlencoded"
+            );
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState !== 4) return;
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve({ oauthTokenResponse: JSON.parse(xhr.response) });
+                } else {
+                    reject({
+                        status: xhr.status,
+                        statusText: xhr.statusText
+                    });
+                }
+            };
+            xhr.send(formData.substr(0, formData.length - 1));
+        });
+    }
+
+    // main entry
+    var appUrl = new URL(window.location.href);
+    var codeFromFirstRequest = appUrl.searchParams.get("code");
+
+    if (codeFromFirstRequest) {
+        // code is arrived
+        // step 2 get token
+        const data = JSON.parse(window.name);
+        // console.log(data.restEndpoint);
+        // console.log(data.requestTokenUrl);
+
+        var oauthOptions = {
+            url: data.requestTokenUrl,
+            data: {
+                client_id: data.clientId,
+                client_secret: data.clientSecret,
+                code: codeFromFirstRequest,
+                grant_type: "authorization_code"
+            }
+        };
+
+        restHqGetToken(oauthOptions).then(function (response) {
+            // use token
+
+            if (data.restEndpoint) {
+                var xhr = new XMLHttpRequest();
+                xhr.open("Get", data.restEndpoint, true);
+                xhr.setRequestHeader("Content-Type", "application/json");
+                xhr.setRequestHeader("Accept", "application/json");
+                xhr.setRequestHeader(
+                    "Authorization",
+                    `Bearer ${response.oauthTokenResponse.access_token}`
+                );
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState !== 4) {
+                        return;
+                    }
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        downloadString(xhr.response, "isheet_fields.json");
+                        window.name = "";
+                        window.location.href = "/";
+                    } else {
+                        // simple popup
+                        alert("No access.");
+                        // remove code from client url
+                        window.name = "";
+                        window.location.href = "/";
+                    }
+                };
+                xhr.send();
+            } else {
+                console.log("No REST endpoint.")
+            }
+        });
+    } else {
+        document.addEventListener("DOMContentLoaded", function () {
+            var appUrl = new URL(window.location.href);
+            var clientId = appUrl.searchParams.get("clientid");
+            var clientSecret = appUrl.searchParams.get("clientsecret");
+            var oauthCodeUrl = appUrl.searchParams.get("codeurl");
+            var requestTokenUrl = appUrl.searchParams.get("requesttokenurl");
+            var restEndpoint = appUrl.searchParams.get("resturl");
+
+            document.getElementById("client-id").value = clientId;
+            document.getElementById("client-secret").value = clientSecret;
+            document.getElementById("get-rest-endpoint").value = restEndpoint;
+            document.getElementById("oauth-url").value = oauthCodeUrl;
+            document.getElementById("request-token-url").value = requestTokenUrl;
+        });
+    }
+
+    // listener
+    function exchangeData() {
+        // start step 1 - get code
+        var clientId = document.getElementById("client-id").value;
+        var clientSecret = document.getElementById("client-secret").value;
+        var restEndpoint = document.getElementById("get-rest-endpoint").value;
+        var oauthCodeUrl = document.getElementById("oauth-url").value;
+        var requestTokenUrl = document.getElementById("request-token-url").value;
+
+        // store input
+        window.name = JSON.stringify({
+            clientId,
+            clientSecret,
+            requestTokenUrl,
+            restEndpoint,
+        });
+        var requestCodeUrl = `${oauthCodeUrl}&client_id=${clientId}&redirect_uri=${appUrl}`;
+        // redirect
+        window.location.href = requestCodeUrl;
+    }
+</script>
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+
+<body>
+    <div style="max-width: 1024px;margin:auto; padding:24px">
+        <h2>
+            Demonstrates OAuth2 code-based authententication and saves response from an optional GET-Url as JSON (Chrome
+            -
+            ready)
+        </h2>
+        <div>
+            <div class="margin-bottom">
+                <label for="oauth-url">Client ID</label>
+            </div>
+            <input style="width:250px" class="input-res" type="text" name="client-id" placeholder="Client Id"
+                id="client-id" value="" />
+            <div class="margin-bottom">
+                <label for="client-secret">Client Secret</label>
+            </div>
+            <input style="width:250px" class="input-res" type="password" name="client-secret"
+                placeholder="Client Secret" id="client-secret" value="" />
+            <div class="margin-bottom">
+                <label for="oauth-url">OAuth request code url (client_id=... will be added)</label>
+            </div>
+            <input style="width:600px" class="input-res" type="text" name="oauth-url"
+                placeholder="f.e. https://domain/uri/authorize.action?response_type=code" id="oauth-url" value="" />
+            <div class="margin-bottom">
+                <label for="request-token-url">OAuth Request token url</label>
+            </div>
+            <input style="width:600px" class="input-res" type="text" name="request-token-url"
+                placeholder="f.e. https://domain/uri/oauth2/token" id="request-token-url" value="" />
+            <div>
+                <input style="width:40px" class="input-res" type="text" name="security-key" value="GET" disabled />
+            </div>
+            <div class="margin-bottom">
+                <label for="security-key">Rest-Endpoint</label>
+            </div>
+            <input style="width:600px" class="input-res" type="text" name="security-key"
+                placeholder="f.e. https://domain/uri" id="get-rest-endpoint" value="" />
+        </div>
+        <title>Get token</title>
+        <button style="padding:12px; width:150px;" onclick="exchangeData()">
+            Start
+        </button>
+        <h4>input fields supports url parameters:</h4>
+        <ul>
+            <li>clientid</li>
+            <li>clientsecret</li>
+            <li>codeurl</li>
+            <li>requesttokenurl</li>
+            <li>resturl</li>
+        </ul>
+    </div>
+</body>
+
+</html>
